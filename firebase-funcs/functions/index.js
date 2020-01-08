@@ -65,6 +65,21 @@ const FBAuth = (req, res, next) => {
     .verifyIdToken(idToken)
     .then(decodedToken => {
       req.user = decodedToken;
+
+      return db
+        .collection("users")
+        .where("userId", "==", req.user.uid)
+        .limit(1)
+        .get();
+    })
+    .then(data => {
+      console.log(data.docs);
+      req.user.handle = data.docs[0].data().handle;
+      return next();
+    })
+    .catch(err => {
+      console.error("Error validating token", err);
+      return res.status(500).json(err);
     });
 };
 
@@ -90,7 +105,7 @@ app.get("/screams", (req, res) => {
 app.post("/screams", FBAuth, (req, res) => {
   let newScream = {
     body: req.body.body,
-    userHandle: req.body.userHandle,
+    userHandle: req.user.handle,
     createdAt: new Date().toISOString(),
     likeCount: 0,
     commentCount: 0
